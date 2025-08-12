@@ -1,0 +1,20 @@
+{% extends 'core/base.html' %}
+{% block content %}
+<h2>Proposals for {{ project.title }}</h2>
+
+{% if proposals %}
+    <ul>
+        {% for proposal in proposals %}
+            <li>
+                <strong>{{ proposal.freelancer.username }}</strong>: ${{ proposal.proposed_price }}<br>
+                "{{ proposal.message }}"<br>
+                <em>Submitted on {{ proposal.submitted_at }}</em>
+            </li>
+            <hr>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p>No proposals yet.</p>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,18 @@
+{% extends 'core/base.html' %}
+{% block content %}
+<h2>Sent Messages</h2>
+<ul>
+    {% for msg in messages %}
+        <li>
+            To <strong>{{ msg.receiver.username }}</strong>: {{ msg.text }}<br>
+            {% if msg.attachment %}
+                Attachment: <a href="{{ msg.attachment.url }}">Download</a><br>
+            {% endif %}
+            <em>Sent at {{ msg.sent_at }}</em>
+        </li>
+        <hr>
+    {% empty %}
+        <li>No messages sent</li>
+    {% endfor %}
+</ul>
+{% endblock %}

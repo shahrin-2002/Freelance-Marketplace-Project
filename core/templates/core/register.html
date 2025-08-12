@@ -1,0 +1,21 @@
+{% extends 'core/base.html' %}
+{% block content %}
+
+<h2>Register</h2>
+
+{% if messages %}
+    {% for message in messages %}
+        <p style="color:red;">{{ message }}</p>
+    {% endfor %}
+{% endif %}
+
+<form method="POST">
+    {% csrf_token %}
+    <input type="text" name="username" placeholder="Username" required><br>
+    <input type="password" name="password" placeholder="Password" required><br>
+    <label><input type="radio" name="role" value="client" required> Client</label>
+    <label><input type="radio" name="role" value="freelancer" required> Freelancer</label><br>
+    <button type="submit">Register</button>
+</form>
+
+{% endblock %}

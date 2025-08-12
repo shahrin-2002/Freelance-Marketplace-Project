@@ -1,0 +1,36 @@
+{% extends 'core/base.html' %}
+{% block content %}
+
+<h2>Welcome, {{ user.username }} (Freelancer)</h2>
+
+<h3>Your Submitted Proposals</h3>
+
+{% if proposals %}
+    <ul>
+        {% for proposal in proposals %}
+            <li>
+                <strong>Project:</strong> 
+                <a href="{% url 'project_detail' proposal.project.id %}">
+                    {{ proposal.project.title }}
+                </a><br>
+                <strong>Proposed Price:</strong> ${{ proposal.proposed_price }}<br>
+                <strong>Message:</strong> {{ proposal.message }}<br>
+                <strong>Status:</strong>
+                {% if proposal.status == "accepted" %}
+                    <span style="color:green;"><strong>Accepted</strong></span>
+                {% elif proposal.status == "rejected" %}
+                    <span style="color:red;"><strong>Rejected</strong></span>
+                {% else %}
+                    <span style="color:gray;">Pending</span>
+                {% endif %}
+                <br>
+                <small>Submitted at {{ proposal.submitted_at }}</small>
+            </li>
+            <hr>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p>You haven’t submitted any proposals yet.</p>
+{% endif %}
+
+{% endblock %}

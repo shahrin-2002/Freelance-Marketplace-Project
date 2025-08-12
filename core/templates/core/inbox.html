@@ -1,0 +1,20 @@
+{% extends 'core/base.html' %}
+{% block content %}
+<h2>Inbox</h2>
+
+<ul>
+    {% if chat_users %}
+        {% for user in chat_users %}
+            <li>
+                <strong>{{ user.username }}</strong>
+                <a href="{% url 'chat_detail' user.username %}" 
+                   style="margin-left: 10px; background: purple; color: white; padding: 6px 12px; border-radius: 5px; text-decoration: none;">
+                   💬 Message
+                </a>
+            </li>
+        {% endfor %}
+    {% else %}
+        <li>No chats yet.</li>
+    {% endif %}
+</ul>
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends 'core/base.html' %}
+{% block content %}
+
+<h2>Welcome, {{ user.username }} (Client)</h2>
+
+<h3>Your Projects</h3>
+<ul>
+    {% for project in projects %}
+        <li><strong>{{ project.title }}</strong> - ${{ project.budget }}</li>
+    {% empty %}
+        <li>You haven’t posted any projects yet.</li>
+    {% endfor %}
+</ul>
+
+<hr>
+
+<h3>Proposals Received</h3>
+<ul>
+    {% for proposal in proposals %}
+        <li>
+            <strong>Project:</strong> {{ proposal.project.title }}<br>
+            <strong>From:</strong> {{ proposal.freelancer.username }}<br>
+            <strong>Amount:</strong> ${{ proposal.proposed_price }}<br>
+            <strong>Message:</strong> {{ proposal.message }}<br>
+            <strong>Status:</strong> {{ proposal.status|title }}<br>
+            <small>Submitted on {{ proposal.submitted_at }}</small>
+
+            {% if proposal.status == 'pending' %}
+                <form method="POST" action="{% url 'update_proposal_status' proposal.id %}" style="display:inline;">
+                    {% csrf_token %}
+                    <button name="action" value="accept" type="submit">Accept</button>
+                    <button name="action" value="reject" type="submit">Reject</button>
+                </form>
+            {% endif %}
+        </li>
+        <hr>
+    {% empty %}
+        <li>No proposals received yet.</li>
+    {% endfor %}
+</ul>
+
+{% endblock %}

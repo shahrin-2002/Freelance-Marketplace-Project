@@ -1,0 +1,16 @@
+{% extends 'core/base.html' %}
+{% block content %}
+<h2>{{ project.title }}</h2>
+<p><strong>Posted by:</strong> {{ project.client.username }}</p>
+<p><strong>Budget:</strong> ${{ project.budget }}</p>
+<p>{{ project.description }}</p>
+
+{% if project.skills.all %}
+    <p><strong>Required Skills:</strong>
+        {% for skill in project.skills.all %}
+            {{ skill.name }}{% if not forloop.last %}, {% endif %}
+        {% endfor %}
+    </p>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Freelance Marketplace</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        nav {
+            margin-bottom: 15px;
+        }
+        nav a {
+            margin-right: 10px;
+            text-decoration: none;
+            color: purple;
+            font-weight: bold;
+        }
+        nav a:hover {
+            text-decoration: underline;
+        }
+        hr {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        {% if user.is_authenticated %}
+            Hello, {{ user.username }} |
+            <a href="{% url 'dashboard' %}">Dashboard</a> |
+            <a href="{% url 'project_list' %}">Projects</a> |
+            <a href="{% url 'inbox' %}">Inbox</a> |
+            {% if user.is_client %}
+                <a href="{% url 'post_project' %}">Post a Project</a> |
+            {% endif %}
+            <a href="{% url 'logout' %}">Logout</a>
+        {% else %}
+            <a href="{% url 'login' %}">Login</a> |
+            <a href="{% url 'register' %}">Register</a>
+        {% endif %}
+    </nav>
+    <hr>
+    
+    {% block content %}
+    {% endblock %}
+</body>
+</html>

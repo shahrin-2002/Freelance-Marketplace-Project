@@ -1,0 +1,37 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+
+<h2>All Projects</h2>
+
+<!-- Skill Filter Dropdown -->
+<form method="GET">
+    <label for="skill">Filter by Skill:</label>
+    <select name="skill" id="skill" onchange="this.form.submit()">
+        <option value="">All</option>
+        {% for skill in skills %}
+            <option value="{{ skill.name }}" {% if request.GET.skill == skill.name %}selected{% endif %}>{{ skill.name }}</option>
+        {% endfor %}
+    </select>
+</form>
+
+<hr>
+
+<!-- Project List -->
+<ul>
+    {% for project in projects %}
+        <li>
+            <a href="{% url 'project_detail' project.id %}">
+                {{ project.title }} - ${{ project.budget }}
+            </a>
+
+            {% if user.is_authenticated and user.is_freelancer %}
+                | <a href="{% url 'submit_proposal' project.id %}">Submit Proposal</a>
+            {% endif %}
+        </li>
+    {% empty %}
+        <li>No projects found.</li>
+    {% endfor %}
+</ul>
+
+{% endblock %}
