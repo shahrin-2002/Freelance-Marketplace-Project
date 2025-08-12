@@ -2,6 +2,7 @@ from django import forms
 from .models import Project, Proposal, SkillTag, Message
 from .models import Review
 from django import forms
+from .models import CustomUser
 
 class ProjectForm(forms.ModelForm):
     skills = forms.ModelMultipleChoiceField(
@@ -34,4 +35,12 @@ class ReviewForm(forms.ModelForm):
         fields = ['rating', 'comment']
         widgets = {
             'rating': forms.RadioSelect(choices=[(i, f"{i} Stars") for i in range(1, 6)])
+        }
+
+class ProfileForm(forms.ModelForm):
+    class Meta:
+        model = CustomUser
+        fields = ['first_name', 'last_name', 'email', 'location', 'bio','skills']
+        widgets = {
+            'skills': forms.CheckboxSelectMultiple
         }

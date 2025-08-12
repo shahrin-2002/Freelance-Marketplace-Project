@@ -1,0 +1,24 @@
+{% extends 'core/base.html' %}
+{% block content %}
+<h2>{{ profile_user.username }}'s Profile</h2>
+
+<p><strong>Location:</strong> {{ profile_user.location }}</p>
+<p><strong>Bio:</strong> {{ profile_user.bio }}</p>
+
+<p><strong>Skills:</strong>
+    {% if profile_user.skills.all %}
+        <ul>
+            {% for skill in profile_user.skills.all %}
+                <li>{{ skill.name }}</li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <em>No skills listed.</em>
+    {% endif %}
+</p>
+
+{% if request.user == profile_user %}
+    <a href="{% url 'edit_profile' user.username %}" style="display: inline-block; background: purple; color: white; padding: 6px 12px; border-radius: 5px; text-decoration: none;">✏️ Edit Profile</a>
+{% endif %}
+
+{% endblock %}

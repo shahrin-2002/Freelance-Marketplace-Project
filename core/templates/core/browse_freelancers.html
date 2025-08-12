@@ -1,0 +1,27 @@
+{% extends 'core/base.html' %}
+{% block content %}
+<h2>Find Freelancers</h2>
+
+<form method="get">
+    <input type="text" name="q" placeholder="Search by name, location..." value="{{ query }}">
+    <button type="submit">Search</button>
+</form>
+
+<hr>
+
+{% if freelancers %}
+    <ul>
+        {% for freelancer in freelancers %}
+            <li>
+                {% if freelancer.profile_picture %}
+                    <img src="{{ freelancer.profile_picture.url }}" alt="Profile Picture" width="40" height="40">
+                {% endif %}
+                <a href="{% url 'view_profile' freelancer.username %}">{{ freelancer.username }}</a>
+                - {{ freelancer.location }}
+            </li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p>No freelancers found.</p>
+{% endif %}
+{% endblock %}

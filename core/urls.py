@@ -17,4 +17,7 @@ urlpatterns = [
     path('proposals/<int:proposal_id>/update/', views.update_proposal_status, name='update_proposal_status'),
     path('proposals/<int:proposal_id>/review/', views.submit_review, name='submit_review'),
     path('proposals/<int:proposal_id>/review/', views.submit_review, name='submit_review'),
+    path('profile/<str:username>/', views.view_profile, name='view_profile'),
+    path('profile/<str:username>/edit/', views.edit_profile, name='edit_profile'),
+    path('freelancers/', views.browse_freelancers, name='browse_freelancers'),
 ]

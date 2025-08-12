@@ -28,6 +28,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect
 from .forms import MessageForm
 from django.db.models import Q
+from .forms import ProfileForm
 
 def home(request):
     return HttpResponse("Welcome to the Freelance Marketplace!")
@@ -262,4 +263,44 @@ def submit_review(request, proposal_id):
     return render(request, 'core/submit_review.html', {
         'form': form,
         'proposal': proposal
+    })
+
+@login_required
+def view_profile(request, username):
+    profile_user = get_object_or_404(CustomUser, username=username)
+    return render(request, 'core/view_profile.html', {
+        'profile_user': profile_user
+    })
+
+@login_required
+def edit_profile(request, username):
+    user = get_object_or_404(CustomUser, username=username)
+
+    if user != request.user:
+        return HttpResponseForbidden("You can only edit your own profile.")
+
+    if request.method == 'POST':
+        form = ProfileForm(request.POST, instance=user)
+        if form.is_valid():
+            form.save()
+            return redirect('view_profile', username=user.username)
+    else:
+        form = ProfileForm(instance=user)
+
+    return render(request, 'core/edit_profile.html', {'form': form})
+
+def browse_freelancers(request):
+    query = request.GET.get('q', '')
+    freelancers = CustomUser.objects.filter(is_freelancer=True)
+
+    if query:
+        freelancers = freelancers.filter(
+            Q(username__icontains=query) |
+            Q(location__icontains=query) |
+            Q(skills__name__icontains=query)
+        ).distinct()
+
+    return render(request, 'core/browse_freelancers.html', {
+        'freelancers': freelancers,
+        'query': query
     })

@@ -9,6 +9,11 @@ class CustomUser(AbstractUser):
     is_client = models.BooleanField(default=False)
     is_freelancer = models.BooleanField(default=False)
 
+    bio = models.TextField(blank=True)
+    location = models.CharField(max_length=100, blank=True)
+    profile_picture = models.ImageField(upload_to='profile_pics/', blank=True, null=True)
+    skills = models.ManyToManyField('SkillTag', blank=True)
+
     def __str__(self):
         return self.username
 
