@@ -15,4 +15,6 @@ urlpatterns = [
     path('inbox/', views.inbox, name='inbox'),
     path('chat/<str:username>/', views.chat_detail, name='chat_detail'),
     path('proposals/<int:proposal_id>/update/', views.update_proposal_status, name='update_proposal_status'),
+    path('proposals/<int:proposal_id>/review/', views.submit_review, name='submit_review'),
+    path('proposals/<int:proposal_id>/review/', views.submit_review, name='submit_review'),
 ]

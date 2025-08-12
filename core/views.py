@@ -10,14 +10,14 @@ from django.db import IntegrityError
 from .forms import ProjectForm
 from .models import Project
 from django.contrib.auth.decorators import login_required
-from .models import Proposal, SkillTag
+from .models import Proposal, SkillTag, Review
 from .forms import ProposalForm
 from django.http import Http404
 from .models import Message
 from .forms import MessageForm
 from django.contrib.auth.decorators import login_required
 # Create your views here.
-
+from .forms import ProjectForm, ProposalForm, MessageForm, ReviewForm
 from django.http import HttpResponse
 from django.db.models import Q, Max
 from django.shortcuts import get_object_or_404
@@ -91,9 +91,11 @@ def dashboard(request):
 
     elif user.is_freelancer:
         proposals = Proposal.objects.filter(freelancer=user).select_related('project').order_by('-submitted_at')
+        reviews = Review.objects.filter(proposal__freelancer=user).select_related('proposal__project', 'proposal__project__client')
         return render(request, 'core/freelancer_dashboard.html', {
             'user': user,
-            'proposals': proposals
+            'proposals': proposals,
+            'reviews': reviews
         })
 
     return redirect('home')
@@ -233,3 +235,31 @@ def update_proposal_status(request, proposal_id):
     proposal.save()
 
     return redirect('dashboard')
+
+@login_required
+def submit_review(request, proposal_id):
+    proposal = get_object_or_404(Proposal, id=proposal_id)
+
+    # Ensure only the client of the project can review
+    if proposal.project.client != request.user:
+        return HttpResponseForbidden("You can’t review this proposal.")
+
+    if hasattr(proposal, 'review'):
+        messages.warning(request, "You've already reviewed this proposal.")
+        return redirect('dashboard')
+
+    if request.method == 'POST':
+        form = ReviewForm(request.POST)
+        if form.is_valid():
+            review = form.save(commit=False)
+            review.proposal = proposal
+            review.save()
+            messages.success(request, "Review submitted successfully.")
+            return redirect('dashboard')
+    else:
+        form = ReviewForm()
+
+    return render(request, 'core/submit_review.html', {
+        'form': form,
+        'proposal': proposal
+    })

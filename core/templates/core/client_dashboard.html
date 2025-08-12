@@ -23,7 +23,7 @@
             <strong>Amount:</strong> ${{ proposal.proposed_price }}<br>
             <strong>Message:</strong> {{ proposal.message }}<br>
             <strong>Status:</strong> {{ proposal.status|title }}<br>
-            <small>Submitted on {{ proposal.submitted_at }}</small>
+            <small>Submitted on {{ proposal.submitted_at }}</small><br>
 
             {% if proposal.status == 'pending' %}
                 <form method="POST" action="{% url 'update_proposal_status' proposal.id %}" style="display:inline;">
@@ -31,6 +31,17 @@
                     <button name="action" value="accept" type="submit">Accept</button>
                     <button name="action" value="reject" type="submit">Reject</button>
                 </form>
+            {% endif %}
+
+            {% if proposal.status == 'accepted' %}
+                {% if proposal.review %}
+                    <p><strong>Rating:</strong> {{ proposal.review.rating }} ⭐</p>
+                    <p><strong>Comment:</strong> {{ proposal.review.comment }}</p>
+                {% else %}
+                    <form method="get" action="{% url 'submit_review' proposal.id %}">
+                        <button type="submit">Leave Review</button>
+                    </form>
+                {% endif %}
             {% endif %}
         </li>
         <hr>

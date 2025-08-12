@@ -1,5 +1,7 @@
 from django import forms
 from .models import Project, Proposal, SkillTag, Message
+from .models import Review
+from django import forms
 
 class ProjectForm(forms.ModelForm):
     skills = forms.ModelMultipleChoiceField(
@@ -25,3 +27,11 @@ class MessageForm(forms.ModelForm):
     class Meta:
         model = Message
         fields = ['receiver', 'text', 'attachment']
+
+class ReviewForm(forms.ModelForm):
+    class Meta:
+        model = Review
+        fields = ['rating', 'comment']
+        widgets = {
+            'rating': forms.RadioSelect(choices=[(i, f"{i} Stars") for i in range(1, 6)])
+        }
