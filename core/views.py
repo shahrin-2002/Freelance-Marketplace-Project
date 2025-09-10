@@ -31,6 +31,10 @@ from .forms import ProfileForm
 from .models import ProjectSkill
 from django.db import transaction
 from .models import Proposal, Project
+from django.db.models import Avg, Q
+from django.db import models
+
+
 
 
 def home(request):
@@ -156,26 +160,30 @@ def project_detail(request, project_id):
 
 @login_required
 def submit_proposal(request, project_id):
-    if not request.user.is_freelancer:
-        return redirect('dashboard')
+    project = get_object_or_404(Project, id=project_id)
 
-    try:
-        project = Project.objects.get(id=project_id)
-    except Project.DoesNotExist:
-        raise Http404("Project not found")
+    # ✅ Block proposals if project is not new
+    if project.status != 'new':
+        messages.error(request, "You can only submit proposals on new projects.")
+        return redirect('project_detail', project_id=project.id)
 
     if request.method == 'POST':
         form = ProposalForm(request.POST)
         if form.is_valid():
             proposal = form.save(commit=False)
-            proposal.freelancer = request.user
             proposal.project = project
+            proposal.freelancer = request.user
             proposal.save()
-            return redirect('project_list')
+            messages.success(request, "Proposal submitted successfully!")
+            return redirect('project_detail', project_id=project.id)
     else:
         form = ProposalForm()
 
-    return render(request, 'core/submit_proposal.html', {'form': form, 'project': project})
+    return render(request, 'core/submit_proposal.html', {
+        'form': form,
+        'project': project
+    })
+
 
 @login_required
 def view_proposals(request, project_id):
@@ -305,9 +313,23 @@ def submit_review(request, proposal_id):
 @login_required
 def view_profile(request, username):
     profile_user = get_object_or_404(CustomUser, username=username)
-    return render(request, 'core/view_profile.html', {
-        'profile_user': profile_user
+
+    # If profile_user is a freelancer, collect reviews for them
+    reviews = []
+    avg_rating = None
+    if profile_user.is_freelancer:
+        reviews = Review.objects.filter(proposal__freelancer=profile_user).select_related(
+            "proposal__project", "proposal__freelancer"
+        )
+        if reviews.exists():
+            avg_rating = reviews.aggregate(models.Avg("rating"))["rating__avg"]
+
+    return render(request, "core/view_profile.html", {
+        "profile_user": profile_user,
+        "reviews": reviews,
+        "avg_rating": avg_rating,
     })
+
 
 @login_required
 def edit_profile(request, username):
@@ -328,7 +350,13 @@ def edit_profile(request, username):
 
 def browse_freelancers(request):
     query = request.GET.get('q', '')
-    freelancers = CustomUser.objects.filter(is_freelancer=True)
+
+
+    freelancers = (
+        CustomUser.objects
+        .filter(is_freelancer=True)
+        .annotate(avg_rating=Avg('proposal__review__rating'))  # Review has related_name='review'
+    )
 
     if query:
         freelancers = freelancers.filter(
@@ -337,7 +365,10 @@ def browse_freelancers(request):
             Q(skills__name__icontains=query)
         ).distinct()
 
+
+    freelancers = freelancers.order_by('-avg_rating', 'username')
+
     return render(request, 'core/browse_freelancers.html', {
         'freelancers': freelancers,
-        'query': query
+        'query': query,
     })

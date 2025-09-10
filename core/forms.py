@@ -50,10 +50,23 @@ class ReviewForm(forms.ModelForm):
             'rating': forms.RadioSelect(choices=[(i, f"{i} Stars") for i in range(1, 6)])
         }
 
+from django import forms
+from .models import CustomUser, SkillTag
+
 class ProfileForm(forms.ModelForm):
+    skills = forms.ModelMultipleChoiceField(
+        queryset=SkillTag.objects.order_by('name'),
+        required=False,
+        widget=forms.CheckboxSelectMultiple
+    )
+
     class Meta:
         model = CustomUser
-        fields = ['name', 'email', 'location', 'bio', 'skills']  # swapped to 'name'
-        widgets = {
-            'skills': forms.CheckboxSelectMultiple
-        }
+        fields = ['name', 'email', 'location', 'bio', 'skills']  # 'name' kept
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        instance = kwargs.get('instance') or getattr(self, 'instance', None)
+        if instance and not getattr(instance, 'is_freelancer', False):
+            # remove from the form entirely (won't render and won't validate)
+            self.fields.pop('skills', None)

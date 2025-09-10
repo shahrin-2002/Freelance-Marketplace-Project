@@ -150,7 +150,12 @@ class Review(models.Model):
         db_table = "reviews"
 
     def __str__(self):
-        return f"Review for proposal #{self.proposal_id}"
+        return f"Review for {self.proposal.freelancer.username} on {self.proposal.project.title}"
+
+    @property
+    def client(self):
+        return self.proposal.project.client
+
 
 
 # -----------------------------

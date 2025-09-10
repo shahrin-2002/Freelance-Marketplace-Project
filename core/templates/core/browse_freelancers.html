@@ -17,7 +17,12 @@
                     <img src="{{ freelancer.profile_picture.url }}" alt="Profile Picture" width="40" height="40">
                 {% endif %}
                 <a href="{% url 'view_profile' freelancer.username %}">{{ freelancer.username }}</a>
-                - {{ freelancer.location }}
+                - 
+                {% if freelancer.avg_rating %}
+                    ⭐ {{ freelancer.avg_rating|floatformat:1 }}/5
+                {% else %}
+                    <em>No ratings yet</em>
+                {% endif %}
             </li>
         {% endfor %}
     </ul>

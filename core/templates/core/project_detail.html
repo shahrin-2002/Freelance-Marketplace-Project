@@ -13,4 +13,16 @@
     </p>
 {% endif %}
 
+<p><strong>Status:</strong> {{ project.get_status_display }}</p>
+
+{% if project.status == "new" and request.user.is_freelancer %}
+    <a href="{% url 'submit_proposal' project.id %}" 
+       style="display: inline-block; background: blue; color: white; padding: 6px 12px; border-radius: 5px; text-decoration: none;">
+        Submit Proposal
+    </a>
+{% elif project.status == "ongoing" %}
+    <p style="color: orange;"><em>This project is already ongoing.</em></p>
+{% elif project.status == "completed" %}
+    <p style="color: green;"><em>This project has been completed.</em></p>
+{% endif %}
 {% endblock %}
