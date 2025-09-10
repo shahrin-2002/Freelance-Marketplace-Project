@@ -24,10 +24,23 @@ class ProposalForm(forms.ModelForm):
         model = Proposal
         fields = ['message', 'proposed_price']
 
+from django import forms
+from .models import Message
+
 class MessageForm(forms.ModelForm):
     class Meta:
         model = Message
-        fields = ['receiver', 'text', 'attachment']
+        fields = ['text', 'attachment']
+        widgets = {
+            'text': forms.Textarea(attrs={'rows': 6}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for unwanted in ('receiver', 'project', 'sender'):
+            if unwanted in self.fields:
+                self.fields.pop(unwanted)
+
 
 class ReviewForm(forms.ModelForm):
     class Meta:
@@ -40,7 +53,7 @@ class ReviewForm(forms.ModelForm):
 class ProfileForm(forms.ModelForm):
     class Meta:
         model = CustomUser
-        fields = ['first_name', 'last_name', 'email', 'location', 'bio','skills']
+        fields = ['name', 'email', 'location', 'bio', 'skills']  # swapped to 'name'
         widgets = {
             'skills': forms.CheckboxSelectMultiple
         }

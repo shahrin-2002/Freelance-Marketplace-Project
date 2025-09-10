@@ -16,7 +16,6 @@ from django.http import Http404
 from .models import Message
 from .forms import MessageForm
 from django.contrib.auth.decorators import login_required
-# Create your views here.
 from .forms import ProjectForm, ProposalForm, MessageForm, ReviewForm
 from django.http import HttpResponse
 from django.db.models import Q, Max
@@ -29,6 +28,10 @@ from django.shortcuts import get_object_or_404, redirect
 from .forms import MessageForm
 from django.db.models import Q
 from .forms import ProfileForm
+from .models import ProjectSkill
+from django.db import transaction
+from .models import Proposal, Project
+
 
 def home(request):
     return HttpResponse("Welcome to the Freelance Marketplace!")
@@ -116,21 +119,36 @@ def post_project(request):
             project = form.save(commit=False)
             project.client = request.user
             project.save()
-            form.save_m2m() 
+
+            # Create through-table rows for selected skills
+            selected_skills = form.cleaned_data.get('skills', [])
+            ProjectSkill.objects.filter(project=project).delete()
+            ProjectSkill.objects.bulk_create(
+                [ProjectSkill(project=project, skill=s) for s in selected_skills]
+            )
+
             return redirect('project_list')
     else:
         form = ProjectForm()
+
     return render(request, 'core/post_project.html', {'form': form})
 
 def project_list(request):
     skill_filter = request.GET.get('skill')
     if skill_filter:
-        projects = Project.objects.filter(skills__name=skill_filter).distinct()
+        projects = Project.objects.filter(
+            projectskill__skill__name__iexact=skill_filter
+        ).distinct()
     else:
         projects = Project.objects.all().order_by('-created_at')
 
     skills = SkillTag.objects.all()
     return render(request, 'core/project_list.html', {'projects': projects, 'skills': skills})
+
+
+    skills = SkillTag.objects.order_by('name')
+    return render(request, 'core/project_list.html', {'projects': projects, 'skills': skills})
+
 
 def project_detail(request, project_id):
     project = Project.objects.get(id=project_id)
@@ -206,7 +224,7 @@ def chat_detail(request, username):
         if form.is_valid():
             message = form.save(commit=False)
             message.sender = user
-            message.receiver = other_user
+            message.receiver = other_user  # 👈 set automatically, no dropdown
             message.save()
             return redirect('chat_detail', username=other_user.username)
     else:
@@ -219,8 +237,10 @@ def chat_detail(request, username):
     })
 
 
+
 @login_required
 @require_POST
+@transaction.atomic
 def update_proposal_status(request, proposal_id):
     proposal = get_object_or_404(Proposal, id=proposal_id)
 
@@ -230,18 +250,29 @@ def update_proposal_status(request, proposal_id):
     action = request.POST.get('action')
 
     if action == 'accept':
-        proposal.status = 'accepted'
+        # 1) mark proposal accepted
+        Proposal.objects.filter(pk=proposal.id).update(status='accepted')
+
+        # 2) mark project ongoing (DB-level update)
+        Project.objects.filter(pk=proposal.project_id).update(status='ongoing')
+
+        # 3) optionally reject others
+        Proposal.objects.filter(project_id=proposal.project_id)\
+                        .exclude(pk=proposal.id).update(status='rejected')
+
+        messages.success(request, "Proposal accepted. Project is now ongoing.")
+
     elif action == 'reject':
-        proposal.status = 'rejected'
-    proposal.save()
+        Proposal.objects.filter(pk=proposal.id).update(status='rejected')
+        messages.info(request, "Proposal rejected.")
 
     return redirect('dashboard')
 
 @login_required
+@transaction.atomic
 def submit_review(request, proposal_id):
     proposal = get_object_or_404(Proposal, id=proposal_id)
 
-    # Ensure only the client of the project can review
     if proposal.project.client != request.user:
         return HttpResponseForbidden("You can’t review this proposal.")
 
@@ -255,7 +286,13 @@ def submit_review(request, proposal_id):
             review = form.save(commit=False)
             review.proposal = proposal
             review.save()
-            messages.success(request, "Review submitted successfully.")
+
+            # ➜ After review, mark project COMPLETED
+            project = proposal.project
+            project.status = 'completed'
+            project.save(update_fields=['status'])
+
+            messages.success(request, "Review submitted. Project marked as completed.")
             return redirect('dashboard')
     else:
         form = ReviewForm()

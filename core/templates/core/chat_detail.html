@@ -3,21 +3,33 @@
 <h2>Chat with {{ other_user.username }}</h2>
 
 <div style="max-height: 300px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; margin-bottom: 20px;">
-    {% for message in messages %}
-        <p>
-            <strong>{{ message.sender.username }}:</strong> {{ message.text }}
-            {% if message.attachment %}
-                <br><a href="{{ message.attachment.url }}" target="_blank">📎 Attachment</a>
-            {% endif %}
-            <br><small>{{ message.timestamp|date:"Y-m-d H:i" }}</small>
-        </p>
-        <hr>
-    {% endfor %}
+    {% if messages %}
+        {% for message in messages %}
+            <p>
+                <strong>{{ message.sender.username }}:</strong> {{ message.text }}
+                {% if message.attachment %}
+                    <br><a href="{{ message.attachment.url }}" target="_blank">📎 Attachment</a>
+                {% endif %}
+                <br><small>{{ message.timestamp|date:"Y-m-d H:i" }}</small>
+            </p>
+            <hr>
+        {% endfor %}
+    {% else %}
+        <p style="color: gray; text-align: center;">No messages yet.</p>
+    {% endif %}
 </div>
 
+
 <form method="POST" enctype="multipart/form-data">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Send</button>
+  {% csrf_token %}
+  <p>
+    <label for="id_text">Text:</label><br>
+    {{ form.text }}
+  </p>
+  <p>
+    <label for="id_attachment">Attachment:</label><br>
+    {{ form.attachment }}
+  </p>
+  <button type="submit">Send</button>
 </form>
 {% endblock %}
