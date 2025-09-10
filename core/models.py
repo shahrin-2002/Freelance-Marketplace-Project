@@ -185,14 +185,3 @@ CustomUser.add_to_class(
     models.ManyToManyField(SkillTag, through="UserSkill", blank=True),
 )
 
-
-# -----------------------------
-# Project views
-# -----------------------------
-class ProjectView(models.Model):
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, db_column="project_id")
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, db_column="user_id")
-    viewed_at = models.DateTimeField(default=timezone.now)
-
-    class Meta:
-        db_table = "project_views"
