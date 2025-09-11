@@ -1,28 +1,28 @@
 {% extends 'core/base.html' %}
 {% block content %}
-<h2>{{ project.title }}</h2>
+<h2 class="text-2xl font-semibold mb-4">{{ project.title }}</h2>
 <p><strong>Posted by:</strong> {{ project.client.username }}</p>
 <p><strong>Budget:</strong> ${{ project.budget }}</p>
 <p>{{ project.description }}</p>
 
-{% if project.skills.all %}
-    <p><strong>Required Skills:</strong>
-        {% for skill in project.skills.all %}
-            {{ skill.name }}{% if not forloop.last %}, {% endif %}
-        {% endfor %}
-    </p>
-{% endif %}
+<p><strong>Required Skills:</strong>
+    {% for skill in project.skills.all %}
+        {{ skill.name }}{% if not forloop.last %}, {% endif %}
+    {% endfor %}
+</p>
 
 <p><strong>Status:</strong> {{ project.get_status_display }}</p>
 
-{% if project.status == "new" and request.user.is_freelancer %}
-    <a href="{% url 'submit_proposal' project.id %}" 
-       style="display: inline-block; background: blue; color: white; padding: 6px 12px; border-radius: 5px; text-decoration: none;">
-        Submit Proposal
-    </a>
-{% elif project.status == "ongoing" %}
-    <p style="color: orange;"><em>This project is already ongoing.</em></p>
-{% elif project.status == "completed" %}
-    <p style="color: green;"><em>This project has been completed.</em></p>
+{% if request.user.is_authenticated and request.user.is_freelancer %}
+    {% if project.status == "new" %}
+        <a href="{% url 'submit_proposal' project.id %}"
+           class="inline-flex items-center rounded-md bg-brand-600 px-4 py-2 text-white hover:bg-brand-700 mt-3">
+            <i class="fa-solid fa-paper-plane mr-2"></i> Submit Proposal
+        </a>
+    {% elif project.status == "ongoing" %}
+        <p class="mt-3 text-amber-600"><em>This project is already ongoing.</em></p>
+    {% elif project.status == "completed" %}
+        <p class="mt-3 text-green-600"><em>This project has been completed.</em></p>
+    {% endif %}
 {% endif %}
 {% endblock %}

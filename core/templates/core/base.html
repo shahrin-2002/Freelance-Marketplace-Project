@@ -1,50 +1,122 @@
+{% load static %}
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Freelance Marketplace</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
-        nav {
-            margin-bottom: 15px;
-        }
-        nav a {
-            margin-right: 10px;
-            text-decoration: none;
-            color: purple;
-            font-weight: bold;
-        }
-        nav a:hover {
-            text-decoration: underline;
-        }
-        hr {
-            margin-top: 10px;
-        }
-    </style>
-</head>
-<body>
-    <nav>
-        {% if user.is_authenticated %}
-            Hello, {{ user.username }} |
-            <a href="{% url 'dashboard' %}">Dashboard</a> |
-            <a href="{% url 'project_list' %}">Projects</a> |
-            <a href="{% url 'inbox' %}">Inbox</a> |
-            <a href="{% url 'view_profile' user.username %}">My Profile</a> |
-            {% if user.is_client %}
-                <a href="{% url 'post_project' %}">Post a Project</a> |
-                <a href="{% url 'browse_freelancers' %}">Find Freelancers</a> |
-            {% endif %}
-            <a href="{% url 'logout' %}">Logout</a>
-        {% else %}
-            <a href="{% url 'login' %}">Login</a> |
-            <a href="{% url 'register' %}">Register</a>
-        {% endif %}
-    </nav>
-    <hr>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}Freelance Market{% endblock %}</title>
 
-    {% block content %}
-    {% endblock %}
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50:"#f7f8ff",100:"#eef0ff",200:"#dfe3ff",300:"#c6cdff",400:"#9faaff",500:"#6d7cff",600:"#4f5ef2",700:"#3d49c2",800:"#2f3894",900:"#262d75" }
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  {% block head_extra %}{% endblock %}
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+  <!-- Header -->
+  <header class="border-b bg-white">
+    <nav class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div class="flex h-16 items-center justify-between">
+
+        <!-- LEFT: brand + primary links -->
+        {% block header_left %}
+        <div class="flex items-center gap-6">
+          {% url 'home' as home_url %}
+          <a href="{% if request.user.is_authenticated %}{% url 'dashboard' %}{% else %}{% url 'login' %}{% endif %}" class="flex items-center gap-2">
+            <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-white font-bold">FM</span>
+            <span class="text-lg font-semibold tracking-tight">Freelance Market</span>
+          </a>
+
+          <div class="hidden md:flex items-center gap-4 text-sm">
+            {% block primary_links %}
+              {% if request.user.is_authenticated and request.user.is_client %}
+                {% url 'project_list' as project_list_url %}{% if project_list_url %}
+                  <a href="{{ project_list_url }}" class="hover:text-brand-700">Projects</a>
+                {% endif %}
+                {% url 'browse_freelancers' as browse_freelancers_url %}{% if browse_freelancers_url %}
+                  <a href="{{ browse_freelancers_url }}" class="hover:text-brand-700">Find Freelancers</a>
+                {% endif %}
+                {% url 'post_project' as post_project_url %}{% if post_project_url %}
+                  <a href="{{ post_project_url }}" class="text-brand-700 font-medium hover:underline">Post a Project</a>
+                {% endif %}
+              {% else %}
+                {% url 'project_list' as project_list_url %}{% if project_list_url %}
+                  <a href="{{ project_list_url }}" class="hover:text-brand-700">Projects</a>
+                  <a href="{{ project_list_url }}?status=new" class="hover:text-brand-700">Submit a Proposal</a>
+                {% endif %}
+              {% endif %}
+            {% endblock %}
+          </div>
+        </div>
+        {% endblock %}
+
+        <!-- RIGHT: auth actions -->
+        {% block header_right %}
+        <div class="flex items-center gap-3">
+          {% if request.user.is_authenticated %}
+            {% url 'inbox' as inbox_url %}{% if inbox_url %}
+              <a href="{{ inbox_url }}" class="hidden sm:inline-block text-sm hover:text-brand-700">Inbox</a>
+            {% endif %}
+            {% url 'view_profile' username=request.user.username as me_url %}{% if me_url %}
+              <a href="{{ me_url }}" class="hidden sm:inline-block text-sm hover:text-brand-700">My Profile</a>
+            {% endif %}
+            {% url 'logout' as logout_url %}{% if logout_url %}
+              <a href="{{ logout_url }}" class="inline-flex items-center rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-100">Logout</a>
+            {% endif %}
+          {% else %}
+            {% url 'login' as login_url %}{% if login_url %}
+              <a href="{{ login_url }}" class="inline-flex items-center rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-100">Login</a>
+            {% endif %}
+            {% url 'register' as register_url %}{% if register_url %}
+              <a href="{{ register_url }}" class="inline-flex items-center rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700">Register</a>
+            {% endif %}
+          {% endif %}
+        </div>
+        {% endblock %}
+
+      </div>
+    </nav>
+  </header>
+
+  {% if messages %}
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 mt-4">
+      {% for message in messages %}
+        <div class="mb-3 rounded-lg border bg-white px-4 py-3 text-sm
+          {% if message.tags == 'success' %}border-green-200 text-green-800
+          {% elif message.tags == 'error' %}border-red-200 text-red-800
+          {% else %}border-gray-200 text-gray-700{% endif %}">
+          {{ message }}
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <main class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="border-t bg-white">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 text-sm text-gray-500 flex items-center justify-between">
+      <p>&copy; {% now "Y" %} Freelance Market</p>
+      <div class="flex gap-4">
+        <a class="hover:text-brand-700" href="#">Privacy</a>
+        <a class="hover:text-brand-700" href="#">Terms</a>
+        <a class="hover:text-brand-700" href="#">Help</a>
+      </div>
+    </div>
+  </footer>
+
+  {% block body_extra %}{% endblock %}
 </body>
 </html>

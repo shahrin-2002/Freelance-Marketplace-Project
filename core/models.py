@@ -4,9 +4,6 @@ from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.conf import settings
 
 
-# -----------------------------
-# Custom user manager
-# -----------------------------
 class CustomUserManager(BaseUserManager):
     def create_user(self, username, password=None, **extra_fields):
         if not username:
@@ -20,19 +17,15 @@ class CustomUserManager(BaseUserManager):
         return user
 
     def create_superuser(self, username, password=None, **extra_fields):
-        # Just reuse create_user – no is_staff/is_superuser
         return self.create_user(username, password=password, **extra_fields)
 
 
-# -----------------------------
-# Custom user (slim schema)
-# -----------------------------
 class CustomUser(AbstractBaseUser):
-    user_id = models.AutoField(primary_key=True)              # PK as user_id
+    user_id = models.AutoField(primary_key=True)
     username = models.CharField(max_length=150, unique=True)
     name = models.CharField(max_length=255, blank=True)
     email = models.EmailField(max_length=254, blank=True)
-    password = models.CharField(max_length=128)              # inherited from AbstractBaseUser
+    password = models.CharField(max_length=128)
 
     is_client = models.BooleanField(default=False)
     is_freelancer = models.BooleanField(default=False)
@@ -53,22 +46,17 @@ class CustomUser(AbstractBaseUser):
         return self.username
 
 
-# -----------------------------
-# Skills
-# -----------------------------
 class SkillTag(models.Model):
-    name = models.CharField(max_length=50, unique=True)
+    name = models.CharField(max_length=100, unique=True)
 
     class Meta:
         db_table = "skill_tags"
+        ordering = ["name"]
 
     def __str__(self):
         return self.name
 
 
-# -----------------------------
-# Projects
-# -----------------------------
 class Project(models.Model):
     STATUS_CHOICES = [
         ("new", "New"),
@@ -83,6 +71,14 @@ class Project(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="new")
 
+    # ⬇⬇⬇ add the explicit M2M using your join table
+    skills = models.ManyToManyField(
+        SkillTag,
+        through="ProjectSkill",
+        related_name="projects",
+        blank=True,
+    )
+
     class Meta:
         db_table = "projects"
 
@@ -90,17 +86,7 @@ class Project(models.Model):
         return self.title
 
 
-# -----------------------------
-# Messages between users
-# -----------------------------
 class Message(models.Model):
-    project = models.ForeignKey(
-    Project,
-    on_delete=models.CASCADE,
-    related_name="messages",
-    null=True,
-    blank=True
-    )
     sender = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='sent_messages')
     receiver = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='received_messages')
     text = models.TextField(blank=True)
@@ -110,11 +96,13 @@ class Message(models.Model):
     class Meta:
         db_table = "messages"
 
+    def __str__(self):
+        txt = (self.text or "").strip()
+        if txt:
+            return txt[:50] + ("…" if len(txt) > 50 else "")
+        return f"Message from {self.sender.username} to {self.receiver.username}"
 
 
-# -----------------------------
-# Proposals and reviews
-# -----------------------------
 class Proposal(models.Model):
     STATUS_CHOICES = [
         ("pending", "Pending"),
@@ -157,10 +145,6 @@ class Review(models.Model):
         return self.proposal.project.client
 
 
-
-# -----------------------------
-# Project-skill & user-skill bridges
-# -----------------------------
 class ProjectSkill(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE, db_column="project_id")
     skill = models.ForeignKey(SkillTag, on_delete=models.CASCADE, db_column="skill_id")
@@ -179,9 +163,7 @@ class UserSkill(models.Model):
         unique_together = (("user", "skill"),)
 
 
-# Add M2M to user
 CustomUser.add_to_class(
     "skills",
     models.ManyToManyField(SkillTag, through="UserSkill", blank=True),
 )
-

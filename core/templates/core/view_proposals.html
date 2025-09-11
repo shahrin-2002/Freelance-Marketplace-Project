@@ -1,52 +1,77 @@
 {% extends 'core/base.html' %}
-{% block content %}
+{% block title %}Proposals{% endblock %}
 
-<h2>Proposals for {{ project.title }}</h2>
+{% block content %}
+<h2 class="text-2xl font-semibold tracking-tight mb-6">Proposals for {{ project.title }}</h2>
 
 {% if proposals %}
-  <ul>
+  <div class="space-y-6">
     {% for proposal in proposals %}
-      <li style="margin-bottom: 20px;">
-        <strong>Freelancer:</strong> {{ proposal.freelancer.username }}<br>
-        <strong>Proposed Price:</strong> ${{ proposal.proposed_price }}<br>
-        <strong>Message:</strong> {{ proposal.message }}<br>
-        <strong>Status:</strong>
-        {% if proposal.status == 'accepted' %}
-          <span style="color: green;"><strong>Accepted</strong></span>
-        {% elif proposal.status == 'rejected' %}
-          <span style="color: red;"><strong>Rejected</strong></span>
-        {% else %}
-          <span style="color: gray;"><strong>Pending</strong></span>
-        {% endif %}
-        <br>
-        <em>Submitted at {{ proposal.submitted_at }}</em>
+      <div class="rounded-xl border bg-white p-6 shadow-sm">
+        <div class="mb-4">
+          <p><strong>Freelancer:</strong> {{ proposal.freelancer.username }}</p>
+          <p><strong>Proposed Price:</strong> ${{ proposal.proposed_price }}</p>
+          <p><strong>Message:</strong> {{ proposal.message }}</p>
+          <p>
+            <strong>Status:</strong>
+            {% if proposal.status == 'accepted' %}
+              <span class="text-green-600 font-semibold">Accepted</span>
+            {% elif proposal.status == 'rejected' %}
+              <span class="text-red-600 font-semibold">Rejected</span>
+            {% else %}
+              <span class="text-gray-600 font-semibold">Pending</span>
+            {% endif %}
+          </p>
+          <p class="text-sm text-gray-500 italic">Submitted at {{ proposal.submitted_at }}</p>
+        </div>
 
-        {# Show Accept/Reject only to the client and only while pending #}
-        {% if request.user == project.client and proposal.status == 'pending' %}
-          <form method="POST" action="{% url 'update_proposal_status' proposal.id %}" style="margin-top:8px;">
-            {% csrf_token %}
-            <button type="submit" name="action" value="accept">Accept</button>
-            <button type="submit" name="action" value="reject">Reject</button>
-          </form>
-        {% endif %}
+        <div class="flex flex-wrap gap-3">
+          {# Start a chat with the freelancer #}
+          {% url 'chat_detail' username=proposal.freelancer.username as msg_url %}
+          <a href="{{ msg_url|default:'#' }}"
+             class="inline-flex items-center rounded-md border px-4 py-2 text-sm font-medium hover:bg-gray-50">
+            <i class="fa-regular fa-message mr-2"></i> Message
+          </a>
 
+          {# Accept / Reject (client-only, while pending) #}
+          {% if request.user == project.client and proposal.status == 'pending' %}
+            <form method="POST" action="{% url 'update_proposal_status' proposal.id %}">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="accept">
+              <button type="submit"
+                      class="inline-flex items-center rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700">
+                <i class="fa-solid fa-check mr-2"></i> Accept
+              </button>
+            </form>
+
+            <form method="POST" action="{% url 'update_proposal_status' proposal.id %}">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="reject">
+              <button type="submit"
+                      class="inline-flex items-center rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">
+                <i class="fa-solid fa-xmark mr-2"></i> Reject
+              </button>
+            </form>
+          {% endif %}
+        </div>
+
+        {# Leave review after acceptance (client) #}
         {% if proposal.status == 'accepted' and request.user == project.client %}
           {% if not proposal.review %}
-            <br>
-            <a href="{% url 'submit_review' proposal.id %}"
-               style="margin-top: 8px; display: inline-block; background-color: green; color: white; padding: 6px 10px; border-radius: 4px; text-decoration: none;">
-              💬 Leave a Review
-            </a>
+            <div class="mt-4">
+              <a href="{% url 'submit_review' proposal.id %}"
+                 class="inline-flex items-center rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">
+                <i class="fa-solid fa-star mr-2"></i> Leave a Review
+              </a>
+            </div>
           {% else %}
-            <p style="color: gray;"><em>✅ Review submitted</em></p>
+            <p class="mt-4 text-sm text-gray-500">✅ Review submitted</p>
           {% endif %}
         {% endif %}
-      </li>
-      <hr>
+      </div>
     {% endfor %}
-  </ul>
+  </div>
 {% else %}
-  <p>No proposals yet.</p>
+  <p class="text-gray-600">No proposals yet.</p>
 {% endif %}
-
 {% endblock %}

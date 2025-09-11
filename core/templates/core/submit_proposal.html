@@ -1,9 +1,37 @@
 {% extends 'core/base.html' %}
+{% block title %}Submit Proposal{% endblock %}
+
 {% block content %}
-<h2>Submit Proposal for: {{ project.title }}</h2>
-<form method="POST">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Submit Proposal</button>
+<h1 class="text-2xl font-semibold tracking-tight">Submit Proposal for: {{ project.title }}</h1>
+
+<form method="POST" class="mt-6 max-w-xl grid gap-6">
+  {% csrf_token %}
+
+  <div>
+    <label for="id_message" class="block text-sm font-medium">Message</label>
+    <textarea id="id_message" name="message" rows="5"
+              class="mt-2 w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500">{{ form.message.value|default_if_none:'' }}</textarea>
+    {% if form.message.errors %}
+      <p class="mt-1 text-sm text-red-700">{{ form.message.errors|join:", " }}</p>
+    {% endif %}
+  </div>
+
+  <div>
+    <label for="id_proposed_price" class="block text-sm font-medium">Proposed Price (USD)</label>
+    <input id="id_proposed_price" name="proposed_price" type="number" step="1" min="0"
+           value="{{ form.proposed_price.value|default_if_none:'' }}"
+           class="mt-2 w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500" />
+    {% if form.proposed_price.errors %}
+      <p class="mt-1 text-sm text-red-700">{{ form.proposed_price.errors|join:", " }}</p>
+    {% endif %}
+  </div>
+
+  <div class="flex items-center gap-3">
+    <button type="submit"
+            class="inline-flex items-center rounded-lg bg-brand-600 px-4 py-2 text-white hover:bg-brand-700">
+      <i class="fa-solid fa-paper-plane mr-2"></i> Submit Proposal
+    </button>
+    <a href="{% url 'project_list' %}" class="text-sm text-gray-600 hover:text-brand-700">Cancel</a>
+  </div>
 </form>
 {% endblock %}

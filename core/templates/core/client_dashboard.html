@@ -1,53 +1,81 @@
-{% extends 'core/base.html' %}
+{% extends "core/base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block primary_links %}{{ block.super }}{% endblock %}
+
 {% block content %}
+<h1 class="text-2xl font-semibold tracking-tight">Welcome, {{ request.user.username }} (Client)</h1>
 
-<h2>Welcome, {{ user.username }} (Client)</h2>
+<section class="mt-6 grid gap-6 lg:grid-cols-2">
+  <!-- Your Projects -->
+  <div class="rounded-2xl border bg-white p-6">
+    <div class="flex items-center justify-between">
+      <h2 class="font-medium">Your Projects</h2>
+      {% url 'post_project' as post_project_url %}
+      {% if post_project_url %}
+        <a href="{{ post_project_url }}" class="text-sm text-brand-700 hover:underline">
+          <i class="fa-solid fa-plus mr-1"></i> Post
+        </a>
+      {% endif %}
+    </div>
 
-<h3>Your Projects</h3>
-<ul>
-    {% for project in projects %}
-        <li><strong>{{ project.title }}</strong> - ${{ project.budget }}</li>
-    {% empty %}
-        <li>You haven’t posted any projects yet.</li>
-    {% endfor %}
-</ul>
+    {% if projects %}
+      <ul class="mt-4 space-y-3">
+        {% for p in projects %}
+          <li class="rounded-lg border px-4 py-3 hover:bg-gray-50">
+            {% url 'project_detail' project_id=p.id as detail_url %}
+            <a href="{{ detail_url|default:'#' }}" class="font-medium hover:text-brand-700">
+              {{ p.title }}
+            </a>
+            <div class="mt-1 text-sm text-gray-600 line-clamp-2">{{ p.description }}</div>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="mt-4 rounded-lg border bg-gray-50 px-4 py-6 text-center text-gray-600">
+        You haven’t posted any projects yet.
+      </div>
+    {% endif %}
+  </div>
 
-<hr>
+  <!-- Proposals Received -->
+  <div class="rounded-2xl border bg-white p-6">
+    <h2 class="font-medium">Proposals Received</h2>
+    {% if proposals %}
+      <ul class="mt-4 space-y-3">
+        {% for pr in proposals %}
+          <li class="rounded-lg border px-4 py-3 hover:bg-gray-50">
+            <div class="flex items-start justify-between gap-4">
+              <div class="min-w-0">
+                <div class="font-medium truncate">{{ pr.project.title }}</div>
+                <div class="text-sm text-gray-600 truncate">
+                  From <span class="font-medium">{{ pr.freelancer.username }}</span>
+                  • ${{ pr.proposed_price }}
+                </div>
+              </div>
 
-<h3>Proposals Received</h3>
-<ul>
-    {% for proposal in proposals %}
-        <li>
-            <strong>Project:</strong> {{ proposal.project.title }}<br>
-            <strong>From:</strong> {{ proposal.freelancer.username }}<br>
-            <strong>Amount:</strong> ${{ proposal.proposed_price }}<br>
-            <strong>Message:</strong> {{ proposal.message }}<br>
-            <strong>Status:</strong> {{ proposal.status|title }}<br>
-            <small>Submitted on {{ proposal.submitted_at }}</small><br>
+              <div class="shrink-0 flex items-center gap-2">
+                {% url 'view_proposals' project_id=pr.project.id as proposals_url %}
+                <a href="{{ proposals_url|default:'#' }}"
+                   class="inline-flex items-center rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50">
+                  <i class="fa-regular fa-eye mr-2"></i> View
+                </a>
 
-            {% if proposal.status == 'pending' %}
-                <form method="POST" action="{% url 'update_proposal_status' proposal.id %}" style="display:inline;">
-                    {% csrf_token %}
-                    <button name="action" value="accept" type="submit">Accept</button>
-                    <button name="action" value="reject" type="submit">Reject</button>
-                </form>
-            {% endif %}
-
-            {% if proposal.status == 'accepted' %}
-                {% if proposal.review %}
-                    <p><strong>Rating:</strong> {{ proposal.review.rating }} ⭐</p>
-                    <p><strong>Comment:</strong> {{ proposal.review.comment }}</p>
-                {% else %}
-                    <form method="get" action="{% url 'submit_review' proposal.id %}">
-                        <button type="submit">Leave Review</button>
-                    </form>
-                {% endif %}
-            {% endif %}
-        </li>
-        <hr>
-    {% empty %}
-        <li>No proposals received yet.</li>
-    {% endfor %}
-</ul>
-
+                {% url 'chat_detail' username=pr.freelancer.username as chat_url %}
+                <a href="{{ chat_url|default:'#' }}"
+                   class="inline-flex items-center rounded-md bg-brand-600 px-3 py-1.5 text-sm text-white hover:bg-brand-700">
+                  <i class="fa-regular fa-message mr-2"></i> Message
+                </a>
+              </div>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="mt-4 rounded-lg border bg-gray-50 px-4 py-6 text-center text-gray-600">
+        No proposals received yet.
+      </div>
+    {% endif %}
+  </div>
+</section>
 {% endblock %}

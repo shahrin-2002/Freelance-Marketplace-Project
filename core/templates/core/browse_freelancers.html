@@ -1,32 +1,71 @@
-{% extends 'core/base.html' %}
+{% extends "core/base.html" %}
+{% block title %}Find Freelancers{% endblock %}
+
+{% block primary_links %}{{ block.super }}{% endblock %}
+
 {% block content %}
-<h2>Find Freelancers</h2>
+<h1 class="text-2xl font-semibold tracking-tight">Freelancers</h1>
 
-<form method="get">
-    <input type="text" name="q" placeholder="Search by name, location..." value="{{ query }}">
-    <button type="submit">Search</button>
-</form>
-
-<hr>
+<div class="mt-4 flex items-center justify-end">
+  <form method="get" class="w-full max-w-xl">
+    <div class="relative">
+      <input
+        name="q"
+        value="{{ request.GET.q }}"
+        type="text"
+        placeholder="Search by name, skill, location..."
+        class="w-full rounded-lg border px-4 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-brand-500"
+      />
+      <button class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-brand-700" title="Search">
+        <i class="fa-solid fa-magnifying-glass"></i>
+      </button>
+    </div>
+  </form>
+</div>
 
 {% if freelancers %}
-    <ul>
-        {% for freelancer in freelancers %}
-            <li>
-                {% if freelancer.profile_picture %}
-                    <img src="{{ freelancer.profile_picture.url }}" alt="Profile Picture" width="40" height="40">
-                {% endif %}
-                <a href="{% url 'view_profile' freelancer.username %}">{{ freelancer.username }}</a>
-                - 
-                {% if freelancer.avg_rating %}
-                    ⭐ {{ freelancer.avg_rating|floatformat:1 }}/5
-                {% else %}
-                    <em>No ratings yet</em>
-                {% endif %}
-            </li>
-        {% endfor %}
-    </ul>
+  <div class="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+    {% for f in freelancers %}
+      <article class="rounded-xl border bg-white p-5 hover:shadow-sm transition">
+        <div class="flex items-start gap-4">
+          <div class="h-12 w-12 shrink-0 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
+            <i class="fa-solid fa-user"></i>
+          </div>
+          <div class="min-w-0">
+            <h3 class="truncate font-medium">
+              {{ f.username }}
+            </h3>
+            <p class="text-sm text-gray-500 truncate">
+              {{ f.location|default:"—" }}
+            </p>
+          </div>
+        </div>
+
+        {% if f.bio %}
+          <p class="mt-4 line-clamp-3 text-sm text-gray-600">{{ f.bio }}</p>
+        {% endif %}
+
+        <div class="mt-4 flex flex-wrap gap-2">
+          {% for s in f.skills.all %}
+            <span class="rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-700">{{ s.name }}</span>
+          {% empty %}
+            {# no skill chips if none #}
+          {% endfor %}
+        </div>
+
+        <div class="mt-5 flex items-center justify-between">
+          <span class="text-sm text-gray-700">
+            {% if f.avg_rating %}Rating: {{ f.avg_rating|floatformat:1 }} / 5{% else %}No ratings yet{% endif %}
+          </span>
+          <a href="{% url 'view_profile' f.username %}"
+             class="inline-flex items-center rounded-md bg-brand-600 px-3 py-1.5 text-sm text-white hover:bg-brand-700">
+            View
+          </a>
+        </div>
+      </article>
+    {% endfor %}
+  </div>
 {% else %}
-    <p>No freelancers found.</p>
+  <div class="mt-8 rounded-xl border bg-white p-8 text-center text-gray-600">No freelancers found.</div>
 {% endif %}
 {% endblock %}

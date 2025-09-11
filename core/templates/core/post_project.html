@@ -1,9 +1,75 @@
-{% extends 'core/base.html' %}
+{% extends "core/base.html" %}
+{% block title %}Post a Project{% endblock %}
+
+{% block primary_links %}
+  {% url 'project_list' as project_list_url %}{% if project_list_url %}
+    <a href="{{ project_list_url }}" class="hover:text-brand-700">Projects</a>
+  {% endif %}
+  {% url 'browse_freelancers' as browse_freelancers_url %}{% if browse_freelancers_url %}
+    <a href="{{ browse_freelancers_url }}" class="hover:text-brand-700">Find Freelancers</a>
+  {% endif %}
+  {% url 'post_project' as post_project_url %}{% if post_project_url %}
+    <a href="{{ post_project_url }}" class="text-brand-700 font-medium hover:underline">Post a Project</a>
+  {% endif %}
+{% endblock %}
+
 {% block content %}
-<h2>Post a New Project</h2>
-<form method="POST">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Post</button>
+<h1 class="text-2xl font-semibold tracking-tight">Post a New Project</h1>
+
+<form method="post" class="mt-6 grid gap-6 max-w-3xl">
+  {% csrf_token %}
+
+  {% if form.non_field_errors %}
+    <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+      {{ form.non_field_errors }}
+    </div>
+  {% endif %}
+
+  <div>
+    <label for="id_title" class="block text-sm font-medium">Title</label>
+    {{ form.title }}
+    {% if form.title.errors %}
+      <p class="mt-1 text-sm text-red-700">{{ form.title.errors|join:', ' }}</p>
+    {% endif %}
+  </div>
+
+  <div>
+    <label for="id_description" class="block text-sm font-medium">Description</label>
+    {{ form.description }}
+    {% if form.description.errors %}
+      <p class="mt-1 text-sm text-red-700">{{ form.description.errors|join:', ' }}</p>
+    {% endif %}
+  </div>
+
+  <div>
+    <label for="id_budget" class="block text-sm font-medium">Budget (USD)</label>
+    {{ form.budget }}
+    {% if form.budget.errors %}
+      <p class="mt-1 text-sm text-red-700">{{ form.budget.errors|join:', ' }}</p>
+    {% endif %}
+  </div>
+
+  <div>
+    <label class="block text-sm font-medium">Skills</label>
+    <div class="mt-2 grid grid-cols-2 gap-2">
+      {% for checkbox in form.skills %}
+        <label class="flex items-center gap-2 rounded-lg border px-3 py-2 hover:bg-gray-50 cursor-pointer">
+          {{ checkbox.tag }} <span class="text-sm">{{ checkbox.choice_label }}</span>
+        </label>
+      {% endfor %}
+    </div>
+    {% if form.skills.errors %}
+      <p class="mt-1 text-sm text-red-700">{{ form.skills.errors|join:', ' }}</p>
+    {% endif %}
+  </div>
+
+  <div class="flex items-center gap-3">
+    <button type="submit" class="inline-flex items-center rounded-lg bg-brand-600 px-4 py-2 text-white hover:bg-brand-700">
+      <i class="fa-solid fa-paper-plane mr-2"></i> Post
+    </button>
+    {% url 'project_list' as project_list_url %}{% if project_list_url %}
+      <a href="{{ project_list_url }}" class="text-sm text-gray-600 hover:text-brand-700">Cancel</a>
+    {% endif %}
+  </div>
 </form>
 {% endblock %}

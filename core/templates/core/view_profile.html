@@ -1,45 +1,78 @@
-{% extends 'core/base.html' %}
+{% extends "core/base.html" %}
+{% block title %}Profile{% endblock %}
+
+{% block primary_links %}{{ block.super }}{% endblock %}
+
 {% block content %}
-<h2>{{ profile_user.username }}'s Profile</h2>
+<div class="rounded-2xl border bg-white p-8">
+  <div class="flex items-start gap-6">
+    <div class="h-16 w-16 rounded-full bg-brand-100 text-brand-800 flex items-center justify-center font-semibold text-xl">
+      {{ profile_user.username|first|upper }}
+    </div>
 
-<p><strong>Location:</strong> {{ profile_user.location }}</p>
-<p><strong>Bio:</strong> {{ profile_user.bio }}</p>
-
-{% if profile_user.is_freelancer %}
-    <p><strong>Skills:</strong>
-        {% if profile_user.skills.all %}
-            <ul>
-                {% for skill in profile_user.skills.all %}
-                    <li>{{ skill.name }}</li>
-                {% endfor %}
-            </ul>
-        {% else %}
-            <em>No skills listed.</em>
+    <div class="min-w-0 flex-1">
+      <div class="flex items-center gap-3">
+        <h1 class="text-2xl font-semibold tracking-tight">{{ profile_user.username }}</h1>
+        {% if profile_user.is_freelancer and avg_rating %}
+          <span class="rounded-full bg-amber-100 text-amber-800 px-2.5 py-1 text-xs font-medium">
+            ★ {{ avg_rating|floatformat:1 }}
+          </span>
         {% endif %}
-    </p>
+      </div>
 
-    <h3>Reviews</h3>
-    {% if avg_rating %}
-        <p><strong>Average Rating:</strong> {{ avg_rating|floatformat:1 }}/5 ⭐</p>
+      {% if profile_user.location %}
+        <p class="mt-1 text-gray-600">{{ profile_user.location }}</p>
+      {% endif %}
+
+      {% if profile_user.bio %}
+        <p class="mt-4 text-gray-700">{{ profile_user.bio }}</p>
+      {% endif %}
+
+      {% if profile_user.skills.all %}
+        <div class="mt-4 flex flex-wrap gap-2">
+          {% for s in profile_user.skills.all %}
+            <span class="rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-700">{{ s.name }}</span>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="mt-6 flex gap-3">
+    {% if request.user.is_authenticated and request.user == profile_user %}
+      {% url 'edit_profile' username=profile_user.username as edit_url %}
+      <a href="{{ edit_url }}" class="inline-flex items-center rounded-md border px-3 py-1.5 text-sm hover:bg-gray-100">
+        <i class="fa-solid fa-pen mr-2"></i> Edit Profile
+      </a>
+    {% elif request.user.is_authenticated %}
+      {% url 'chat_detail' username=profile_user.username as chat_url %}
+      <a href="{{ chat_url }}" class="inline-flex items-center rounded-md border px-3 py-1.5 text-sm hover:bg-gray-100">
+        <i class="fa-regular fa-message mr-2"></i> Message
+      </a>
     {% endif %}
+  </div>
 
-    {% if reviews %}
-        <ul>
-            {% for review in reviews %}
-                <li>
-                    <strong>Rating:</strong> {{ review.rating }} / 5<br>
-                    <strong>Comment:</strong> {{ review.comment|default:"(No comment)" }}<br>
-                    <em>From {{ review.client.username }} on project "{{ review.proposal.project.title }}" ({{ review.created_at|date:"Y-m-d" }})</em>
-                </li>
-                <hr>
-            {% endfor %}
-        </ul>
-    {% else %}
-        <p><em>No reviews yet.</em></p>
-    {% endif %}
-{% endif %}
-
-{% if request.user == profile_user %}
-    <a href="{% url 'edit_profile' user.username %}" style="display: inline-block; background: purple; color: white; padding: 6px 12px; border-radius: 5px; text-decoration: none;">✏️ Edit Profile</a>
-{% endif %}
+  {% if profile_user.is_freelancer %}
+    <div class="mt-8">
+      <h2 class="text-lg font-semibold mb-4">Reviews</h2>
+      {% if reviews %}
+        <div class="space-y-4">
+          {% for r in reviews %}
+            <div class="rounded-xl border p-4">
+              <div class="flex items-center justify-between">
+                <div class="font-medium">{{ r.proposal.project.title }}</div>
+                <div class="text-amber-700">★ {{ r.rating }}</div>
+              </div>
+              {% if r.comment %}
+                <p class="mt-2 text-gray-700">{{ r.comment }}</p>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="rounded-xl border p-6 text-gray-600">No reviews yet.</div>
+      {% endif %}
+    </div>
+  {% endif %}
+</div>
 {% endblock %}

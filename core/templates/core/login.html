@@ -1,9 +1,41 @@
-{% extends 'core/base.html' %}
+{% extends "core/base.html" %}
+{% block title %}Login{% endblock %}
+
+{% block primary_links %}{% endblock %}
+{% block header_right %}{% endblock %}
+
 {% block content %}
-<h2>Login</h2>
-<form method="POST">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Login</button>
-</form>
+<div class="mx-auto max-w-md">
+  <div class="rounded-2xl border bg-white p-8">
+    <h1 class="text-2xl font-semibold tracking-tight">Welcome back</h1>
+    <p class="mt-1 text-sm text-gray-600">Log in to continue.</p>
+
+    <form method="post" class="mt-6 grid gap-5" autocomplete="off">
+      {% csrf_token %}
+
+      <input type="text" name="fake-username" autocomplete="username" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;">
+      <input type="password" name="fake-password" autocomplete="new-password" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;">
+
+      <div>
+        <label class="block text-sm font-medium" for="id_username">Username</label>
+        <input id="id_username" name="username" type="text" inputmode="text" autocapitalize="none" spellcheck="false"
+               autocomplete="off" value=""
+               class="mt-2 w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500">
+      </div>
+      <div>
+        <label class="block text-sm font-medium" for="id_password">Password</label>
+        <input id="id_password" name="password" type="password" autocomplete="new-password" value=""
+               class="mt-2 w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500">
+      </div>
+      <button class="mt-2 inline-flex w-full items-center justify-center rounded-lg bg-brand-600 px-4 py-2 text-white hover:bg-brand-700">
+        Login
+      </button>
+    </form>
+
+    <p class="mt-6 text-center text-sm text-gray-600">
+      New here?
+      <a href="{% url 'register' %}" class="text-brand-700 hover:underline">Create an account</a>
+    </p>
+  </div>
+</div>
 {% endblock %}

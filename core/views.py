@@ -1,55 +1,53 @@
-from django.shortcuts import render
-from django.shortcuts import render, redirect
-from django.contrib.auth import login, authenticate, logout
-from django.contrib.auth.forms import AuthenticationForm
-from .models import CustomUser
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
+from django.contrib.auth import login, logout
+from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.models import User
-from django.db import IntegrityError
-from .forms import ProjectForm
-from .models import Project
-from django.contrib.auth.decorators import login_required
-from .models import Proposal, SkillTag, Review
-from .forms import ProposalForm
-from django.http import Http404
-from .models import Message
-from .forms import MessageForm
-from django.contrib.auth.decorators import login_required
-from .forms import ProjectForm, ProposalForm, MessageForm, ReviewForm
-from django.http import HttpResponse
-from django.db.models import Q, Max
-from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_POST
+from django.views.decorators.cache import never_cache
 from django.http import HttpResponseForbidden
-from .models import Message, CustomUser
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import get_object_or_404, redirect
-from .forms import MessageForm
-from django.db.models import Q
-from .forms import ProfileForm
-from .models import ProjectSkill
 from django.db import transaction
-from .models import Proposal, Project
 from django.db.models import Avg, Q
 from django.db import models
 
+from .models import (
+    CustomUser,
+    Project,
+    Proposal,
+    Review,
+    SkillTag,
+    Message,
+    ProjectSkill,
+)
+from .forms import (
+    ProjectForm,
+    ProposalForm,
+    MessageForm,
+    ReviewForm,
+    ProfileForm,
+)
 
 
+def start(request):
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+    return redirect('login')
 
-def home(request):
-    return HttpResponse("Welcome to the Freelance Marketplace!")
 
 def home(request):
     return render(request, 'core/home.html')
 
+
+@never_cache
 def register(request):
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+
     if request.method == 'POST':
         username = request.POST['username']
         password = request.POST['password']
         role = request.POST['role']
 
-        # Check if username already exists
         if CustomUser.objects.filter(username=username).exists():
             messages.error(request, "Username already exists.")
             return render(request, 'core/register.html')
@@ -63,14 +61,18 @@ def register(request):
             user.save()
             login(request, user)
             return redirect('dashboard')
-
-        except IntegrityError:
+        except Exception:
             messages.error(request, "Registration failed. Please try again.")
             return render(request, 'core/register.html')
 
     return render(request, 'core/register.html')
 
+
+@never_cache
 def login_view(request):
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+
     if request.method == 'POST':
         form = AuthenticationForm(request, data=request.POST)
         if form.is_valid():
@@ -78,151 +80,204 @@ def login_view(request):
             return redirect('dashboard')
     else:
         form = AuthenticationForm()
+
     return render(request, 'core/login.html', {'form': form})
 
+
+@never_cache
 @login_required
 def dashboard(request):
     user = request.user
 
     if user.is_client:
-        # Get all projects posted by the client
         projects = Project.objects.filter(client=user).order_by('-created_at')
-
-        # Get all proposals sent to those projects
-        proposals = Proposal.objects.filter(project__client=user).select_related('project', 'freelancer').order_by('-submitted_at')
-
+        proposals = (
+            Proposal.objects
+            .filter(project__client=user)
+            .select_related('project', 'freelancer')
+            .order_by('-submitted_at')
+        )
         return render(request, 'core/client_dashboard.html', {
             'user': user,
             'projects': projects,
-            'proposals': proposals
+            'proposals': proposals,
         })
 
-    elif user.is_freelancer:
-        proposals = Proposal.objects.filter(freelancer=user).select_related('project').order_by('-submitted_at')
-        reviews = Review.objects.filter(proposal__freelancer=user).select_related('proposal__project', 'proposal__project__client')
+    if user.is_freelancer:
+        proposals = (
+            Proposal.objects
+            .filter(freelancer=user)
+            .select_related('project')
+            .order_by('-submitted_at')
+        )
+        reviews = Review.objects.filter(
+            proposal__freelancer=user
+        ).select_related('proposal__project', 'proposal__project__client')
         return render(request, 'core/freelancer_dashboard.html', {
             'user': user,
             'proposals': proposals,
-            'reviews': reviews
+            'reviews': reviews,
         })
 
     return redirect('home')
+
 
 def logout_view(request):
     logout(request)
     return redirect('login')
 
+
 @login_required
 def post_project(request):
-    if not request.user.is_client:
-        return redirect('dashboard')
+    if not getattr(request.user, "is_client", False):
+        return redirect("dashboard")
 
-    if request.method == 'POST':
+    if request.method == "POST":
         form = ProjectForm(request.POST)
         if form.is_valid():
-            project = form.save(commit=False)
-            project.client = request.user
-            project.save()
+            with transaction.atomic():
+                project = form.save(commit=False)
+                project.client = request.user
+                project.save()
 
-            # Create through-table rows for selected skills
-            selected_skills = form.cleaned_data.get('skills', [])
-            ProjectSkill.objects.filter(project=project).delete()
-            ProjectSkill.objects.bulk_create(
-                [ProjectSkill(project=project, skill=s) for s in selected_skills]
-            )
+                ProjectSkill.objects.filter(project=project).delete()
+                skills_qs = form.cleaned_data.get("skills")
+                if skills_qs:
+                    ProjectSkill.objects.bulk_create(
+                        [ProjectSkill(project=project, skill=s) for s in skills_qs]
+                    )
 
-            return redirect('project_list')
+            return redirect("project_list")
     else:
         form = ProjectForm()
 
-    return render(request, 'core/post_project.html', {'form': form})
+    return render(request, "core/post_project.html", {"form": form})
+
 
 def project_list(request):
     skill_filter = request.GET.get('skill')
+    status_filter = request.GET.get('status')
+
+    projects = Project.objects.all()
+
     if skill_filter:
-        projects = Project.objects.filter(
+        projects = projects.filter(
             projectskill__skill__name__iexact=skill_filter
-        ).distinct()
-    else:
-        projects = Project.objects.all().order_by('-created_at')
+        )
 
-    skills = SkillTag.objects.all()
-    return render(request, 'core/project_list.html', {'projects': projects, 'skills': skills})
+    if status_filter in ["new", "ongoing", "completed"]:
+        projects = projects.filter(status=status_filter)
 
-
+    projects = projects.order_by('-created_at')
     skills = SkillTag.objects.order_by('name')
-    return render(request, 'core/project_list.html', {'projects': projects, 'skills': skills})
+
+    return render(request, 'core/project_list.html', {
+        'projects': projects,
+        'skills': skills
+    })
 
 
 def project_detail(request, project_id):
-    project = Project.objects.get(id=project_id)
-    return render(request, 'core/project_detail.html', {'project': project})
+    project = get_object_or_404(Project, id=project_id)
+    return render(request, 'core/project_detail.html', {
+        'project': project,
+    })
 
+
+@never_cache
 @login_required
 def submit_proposal(request, project_id):
     project = get_object_or_404(Project, id=project_id)
 
-    # ✅ Block proposals if project is not new
-    if project.status != 'new':
+    if project.status != "new":
         messages.error(request, "You can only submit proposals on new projects.")
-        return redirect('project_detail', project_id=project.id)
+        return redirect("project_detail", project_id=project.id)
 
-    if request.method == 'POST':
+    if request.method == "POST":
         form = ProposalForm(request.POST)
         if form.is_valid():
             proposal = form.save(commit=False)
             proposal.project = project
             proposal.freelancer = request.user
             proposal.save()
+
+            # Optional: seed a chat message to the client when a proposal is submitted
+            Message.objects.create(
+                sender=request.user,
+                receiver=project.client,
+                text=f"Hello {project.client.username}, I just submitted a proposal for “{project.title}”."
+            )
+
             messages.success(request, "Proposal submitted successfully!")
-            return redirect('project_detail', project_id=project.id)
+            return redirect("project_detail", project_id=project.id)
     else:
         form = ProposalForm()
 
-    return render(request, 'core/submit_proposal.html', {
-        'form': form,
-        'project': project
-    })
+    return render(request, "core/submit_proposal.html", {"form": form, "project": project})
 
-
+@never_cache
 @login_required
 def view_proposals(request, project_id):
-    project = Project.objects.get(id=project_id)
+    project = get_object_or_404(Project, id=project_id)
 
-    # Only allow the client who owns the project to view its proposals
     if request.user != project.client:
         return redirect('dashboard')
 
     proposals = Proposal.objects.filter(project=project).order_by('-submitted_at')
     return render(request, 'core/view_proposals.html', {'project': project, 'proposals': proposals})
 
+
+@never_cache
 @login_required
 def inbox(request):
     user = request.user
 
+    partner_ids = set()
+
     if user.is_client:
-        # Get freelancers who submitted proposals to this client's projects
-        client_projects = Project.objects.filter(client=user)
-        proposals = Proposal.objects.filter(project__in=client_projects).select_related('freelancer')
-        chat_users = set(p.freelancer for p in proposals)
+        partner_ids.update(
+            Proposal.objects.filter(project__client=user)
+            .values_list("freelancer_id", flat=True)
+        )
+    if user.is_freelancer:
+        partner_ids.update(
+            Proposal.objects.filter(freelancer=user)
+            .values_list("project__client_id", flat=True)
+        )
 
-    elif user.is_freelancer:
-        # Get clients whose projects the freelancer submitted proposals to
-        proposals = Proposal.objects.filter(freelancer=user).select_related('project__client')
-        chat_users = set(p.project.client for p in proposals)
+    partner_ids.update(
+        Message.objects.filter(sender=user).values_list("receiver_id", flat=True)
+    )
+    partner_ids.update(
+        Message.objects.filter(receiver=user).values_list("sender_id", flat=True)
+    )
 
-    else:
-        chat_users = set()
+    partners = CustomUser.objects.filter(pk__in=partner_ids)
 
-    return render(request, 'core/inbox.html', {'chat_users': chat_users})
+    from django.db.models import Max, Q
+    rows = []
+    for p in partners:
+        last = (
+            Message.objects.filter(
+                Q(sender=user, receiver=p) | Q(sender=p, receiver=user)
+            ).aggregate(last=Max("timestamp"))["last"]
+        )
+        rows.append((p, last))
+
+    rows.sort(key=lambda x: (x[1] is None, x[1]), reverse=True)
+    chats = [{"user": u, "last": ts} for u, ts in rows]
+
+    return render(request, "core/inbox.html", {"chats": chats})
 
 
+
+@never_cache
 @login_required
 def chat_detail(request, username):
     other_user = get_object_or_404(CustomUser, username=username)
     user = request.user
 
-    messages = Message.objects.filter(
+    msgs = Message.objects.filter(
         Q(sender=user, receiver=other_user) |
         Q(sender=other_user, receiver=user)
     ).order_by('timestamp')
@@ -230,22 +285,22 @@ def chat_detail(request, username):
     if request.method == 'POST':
         form = MessageForm(request.POST, request.FILES)
         if form.is_valid():
-            message = form.save(commit=False)
-            message.sender = user
-            message.receiver = other_user  # 👈 set automatically, no dropdown
-            message.save()
+            m = form.save(commit=False)
+            m.sender = user
+            m.receiver = other_user
+            m.save()
             return redirect('chat_detail', username=other_user.username)
     else:
         form = MessageForm()
 
     return render(request, 'core/chat_detail.html', {
-        'messages': messages,
+        'messages': msgs,
         'form': form,
         'other_user': other_user,
     })
 
 
-
+@never_cache
 @login_required
 @require_POST
 @transaction.atomic
@@ -255,35 +310,42 @@ def update_proposal_status(request, proposal_id):
     if proposal.project.client != request.user:
         return HttpResponseForbidden("You do not have permission to modify this proposal.")
 
-    action = request.POST.get('action')
+    action = request.POST.get("action")
 
-    if action == 'accept':
-        # 1) mark proposal accepted
-        Proposal.objects.filter(pk=proposal.id).update(status='accepted')
+    if action == "accept":
+        # 1) accept this proposal
+        Proposal.objects.filter(pk=proposal.id).update(status="accepted")
+        # 2) mark project ongoing
+        Project.objects.filter(pk=proposal.project_id).update(status="ongoing")
+        # 3) reject all other proposals for this project
+        Proposal.objects.filter(project_id=proposal.project_id).exclude(pk=proposal.id).update(status="rejected")
 
-        # 2) mark project ongoing (DB-level update)
-        Project.objects.filter(pk=proposal.project_id).update(status='ongoing')
-
-        # 3) optionally reject others
-        Proposal.objects.filter(project_id=proposal.project_id)\
-                        .exclude(pk=proposal.id).update(status='rejected')
+        # 4) seed a chat (NO 'project' kwarg anymore)
+        Message.objects.create(
+            sender=request.user,
+            receiver=proposal.freelancer,
+            text=f"Hi {proposal.freelancer.username}, I’ve accepted your proposal for “{proposal.project.title}”."
+        )
 
         messages.success(request, "Proposal accepted. Project is now ongoing.")
 
-    elif action == 'reject':
-        Proposal.objects.filter(pk=proposal.id).update(status='rejected')
+    elif action == "reject":
+        Proposal.objects.filter(pk=proposal.id).update(status="rejected")
         messages.info(request, "Proposal rejected.")
 
-    return redirect('dashboard')
+    return redirect("dashboard")
 
+@never_cache
 @login_required
 @transaction.atomic
 def submit_review(request, proposal_id):
     proposal = get_object_or_404(Proposal, id=proposal_id)
 
+    # Only the project client can review
     if proposal.project.client != request.user:
         return HttpResponseForbidden("You can’t review this proposal.")
 
+    # Prevent duplicate review
     if hasattr(proposal, 'review'):
         messages.warning(request, "You've already reviewed this proposal.")
         return redirect('dashboard')
@@ -295,10 +357,17 @@ def submit_review(request, proposal_id):
             review.proposal = proposal
             review.save()
 
-            # ➜ After review, mark project COMPLETED
+            # Mark project completed
             project = proposal.project
             project.status = 'completed'
             project.save(update_fields=['status'])
+
+            # 🔔 Notify freelancer (NO 'project=' kwarg here)
+            Message.objects.create(
+                sender=request.user,
+                receiver=proposal.freelancer,
+                text=f"{request.user.username} left a {review.rating}/5 review on '{project.title}': {review.comment}"
+            )
 
             messages.success(request, "Review submitted. Project marked as completed.")
             return redirect('dashboard')
@@ -310,17 +379,18 @@ def submit_review(request, proposal_id):
         'proposal': proposal
     })
 
+
+@never_cache
 @login_required
 def view_profile(request, username):
     profile_user = get_object_or_404(CustomUser, username=username)
 
-    # If profile_user is a freelancer, collect reviews for them
     reviews = []
     avg_rating = None
     if profile_user.is_freelancer:
-        reviews = Review.objects.filter(proposal__freelancer=profile_user).select_related(
-            "proposal__project", "proposal__freelancer"
-        )
+        reviews = Review.objects.filter(
+            proposal__freelancer=profile_user
+        ).select_related("proposal__project", "proposal__freelancer")
         if reviews.exists():
             avg_rating = reviews.aggregate(models.Avg("rating"))["rating__avg"]
 
@@ -331,6 +401,7 @@ def view_profile(request, username):
     })
 
 
+@never_cache
 @login_required
 def edit_profile(request, username):
     user = get_object_or_404(CustomUser, username=username)
@@ -348,14 +419,15 @@ def edit_profile(request, username):
 
     return render(request, 'core/edit_profile.html', {'form': form})
 
+
 def browse_freelancers(request):
     query = request.GET.get('q', '')
-
 
     freelancers = (
         CustomUser.objects
         .filter(is_freelancer=True)
-        .annotate(avg_rating=Avg('proposal__review__rating'))  # Review has related_name='review'
+        .annotate(avg_rating=Avg('proposal__review__rating'))  # rating from accepted/completed reviews
+        .prefetch_related('skills')
     )
 
     if query:
@@ -364,7 +436,6 @@ def browse_freelancers(request):
             Q(location__icontains=query) |
             Q(skills__name__icontains=query)
         ).distinct()
-
 
     freelancers = freelancers.order_by('-avg_rating', 'username')
 

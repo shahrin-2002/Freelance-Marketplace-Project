@@ -1,9 +1,32 @@
 {% extends 'core/base.html' %}
+{% block title %}Edit Profile{% endblock %}
+
 {% block content %}
-<h2>Edit Profile</h2>
-<form method="POST" enctype="multipart/form-data">
+<div class="max-w-2xl mx-auto bg-white p-8 rounded-xl border">
+  <h2 class="text-xl font-semibold mb-6">Edit Profile</h2>
+  <form method="POST" enctype="multipart/form-data" class="space-y-4">
     {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Save</button>
-</form>
+    <div>
+      {{ form.name.label_tag }} {{ form.name }}
+    </div>
+    <div>
+      {{ form.email.label_tag }} {{ form.email }}
+    </div>
+    <div>
+      {{ form.location.label_tag }} {{ form.location }}
+    </div>
+    <div>
+      {{ form.bio.label_tag }} {{ form.bio }}
+    </div>
+    {% if form.skills %}
+    <div>
+      <label class="block mb-2 font-medium">Skills</label>
+      {{ form.skills }}
+    </div>
+    {% endif %}
+    <button type="submit" class="rounded-md bg-brand-600 text-white px-4 py-2 hover:bg-brand-700">
+      Save
+    </button>
+  </form>
+</div>
 {% endblock %}
